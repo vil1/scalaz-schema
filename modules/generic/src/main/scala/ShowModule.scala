@@ -5,7 +5,7 @@ package schema
 package generic
 
 trait ShowModule[R <: Realisation] extends GenericSchemaModule[R] {
-  import Schema._
+  import RecursionSchemes._
 
   implicit val showDecidableInstance: Decidable[Show] = new Decidable[Show] {
     override def choose2[Z, A1, A2](a1: => Show[A1], a2: => Show[A2])(f: Z => A1 \/ A2): Show[Z] =

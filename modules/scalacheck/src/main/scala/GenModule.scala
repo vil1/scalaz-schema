@@ -10,7 +10,7 @@ import org.scalacheck._
 
 trait GenModule[R <: Realisation] extends SchemaModule[R] {
 
-  import Schema._
+  import RecursionSchemes._
 
   implicit final def algebra(
     implicit primNT: R.Prim ~> Gen

@@ -13,7 +13,7 @@ object Json {
 
 trait JsonModule[R <: Realisation] extends SchemaModule[R] {
   import Json._
-  import Schema._
+  import RecursionSchemes._
 
   implicit final def algebra(
     implicit primNT: R.Prim ~> Encoder,

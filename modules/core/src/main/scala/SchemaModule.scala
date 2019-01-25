@@ -133,6 +133,8 @@ final case class IsoSchema[Prim[_], SumTermId, ProductTermId, F[_], A0, A](
 
 object Schema {
 
+  import RecursionSchemes._
+
   type FSchema[Prim[_], SumTermId, ProductTermId, A] =
     Fix[Schema[Prim, SumTermId, ProductTermId, ?[_], ?], A]
 
@@ -205,8 +207,9 @@ object Schema {
       LabelledSum1(id, schema)
 
     def to[F[_]](
-      implicit algebra: HAlgebra[Schema[Prim, SumTermId, ProductTermId, ?[_], ?], F]
-    ): F[A] = cataNT(algebra)(schema)
+      implicit algebra: HAlgebra[Schema[Prim, SumTermId, ProductTermId, ?[_], ?], F],
+      functor: HFunctor[Schema[Prim, SumTermId, ProductTermId, ?[_], ?]]
+    ): F[A] = cata(algebra).apply(schema)
 
     def imap[B](_iso: Iso[A, B]): FSchema[Prim, SumTermId, ProductTermId, B] = schema.unFix match {
       case IsoSchema(base, iso) => Fix(IsoSchema(base, iso.composeIso(_iso)))
@@ -218,18 +221,6 @@ object Schema {
   ///////////////////////
   // Schema operations
   ///////////////////////
-
-  type HAlgebra[F[_[_], _], G[_]] = F[G, ?] ~> G
-
-  def cataNT[Prim[_], SumTermId, ProductTermId, F[_]](
-    alg: HAlgebra[Schema[Prim, SumTermId, ProductTermId, ?[_], ?], F]
-  ): (FSchema[Prim, SumTermId, ProductTermId, ?] ~> F) =
-    new (FSchema[Prim, SumTermId, ProductTermId, ?] ~> F) { self =>
-
-      def apply[A](f: FSchema[Prim, SumTermId, ProductTermId, A]): F[A] =
-        alg.apply[A](f.unFix.hmap[F](self))
-    }
-
 }
 
 trait SchemaModule[R <: Realisation] {
@@ -237,9 +228,64 @@ trait SchemaModule[R <: Realisation] {
   val R: R
 
   import Schema._
+  import RecursionSchemes._
 
   type RProductTerm[F[_], A] = ProductTerm[F, A, R.Prim, R.SumTermId, R.ProductTermId]
   type RSumTerm[F[_], A]     = SumTerm[F, A, R.Prim, R.SumTermId, R.ProductTermId]
+
+  type RSchema[F[_], A] = Schema[R.Prim, R.SumTermId, R.ProductTermId, F, A]
+
+  implicit object schemaHFunctor extends HTraverse[RSchema] {
+
+    override def hmap[F[_], G[_]](f: F ~> G) =
+      new (RSchema[F, ?] ~> RSchema[G, ?]) {
+
+        def apply[X](
+          fax: RSchema[F, X]
+        ): RSchema[G, X] = fax.hmap(f)
+      }
+
+    override def sequence[G[_], A[_]](implicit G: Applicative[G]) =
+      new (RSchema[λ[α => G[A[α]]], ?] ~> λ[α => G[RSchema[A, α]]]) {
+        type GA[X] = G[A[X]]
+
+        def apply[X](sgax: RSchema[GA, X]): G[RSchema[A, X]] = sgax match {
+          case _: One[R.Prim, R.SumTermId, R.ProductTermId, GA] =>
+            G.point(One[R.Prim, R.SumTermId, R.ProductTermId, A]())
+          case s: :+:[R.Prim, R.SumTermId, R.ProductTermId, GA, a, b] =>
+            G.apply2(s.left, s.right)((l: A[a], r: A[b]) => :+:(l, r))
+          case p: :*:[GA, a, b, R.Prim, R.SumTermId, R.ProductTermId] =>
+            G.apply2(p.left, p.right)((l: A[a], r: A[b]) => :*:(l, r))
+          case p: PrimSchema[GA, a, R.Prim, R.SumTermId, R.ProductTermId] =>
+            G.point(PrimSchema[A, a, R.Prim, R.SumTermId, R.ProductTermId](p.prim))
+          case t: SumTerm[GA, a, R.Prim, R.SumTermId, R.ProductTermId] =>
+            G.map(t.schema)(
+              (s: A[a]) => SumTerm[A, a, R.Prim, R.SumTermId, R.ProductTermId](t.id, s)
+            )
+          case u: Union[R.Prim, R.SumTermId, R.ProductTermId, GA, a, ae] =>
+            G.map(u.choices)(
+              (s: A[ae]) => new Union[R.Prim, R.SumTermId, R.ProductTermId, A, a, ae](s, u.iso) {}
+            )
+          case t: ProductTerm[GA, a, R.Prim, R.SumTermId, R.ProductTermId] =>
+            G.map(t.schema)(
+              (s: A[a]) => ProductTerm[A, a, R.Prim, R.SumTermId, R.ProductTermId](t.id, s)
+            )
+
+          case u: Record[R.Prim, R.SumTermId, R.ProductTermId, GA, a, ae] =>
+            G.map(u.fields)(
+              (s: A[ae]) => new Record[R.Prim, R.SumTermId, R.ProductTermId, A, a, ae](s, u.iso) {}
+            )
+          case s: SeqSchema[GA, a, R.Prim, R.SumTermId, R.ProductTermId] =>
+            G.map(s.element)(
+              (a: A[a]) => SeqSchema[A, a, R.Prim, R.SumTermId, R.ProductTermId](a)
+            )
+          case i: IsoSchema[R.Prim, R.SumTermId, R.ProductTermId, GA, a0, a] =>
+            G.map(i.base)(
+              (a: A[a0]) => IsoSchema[R.Prim, R.SumTermId, R.ProductTermId, A, a0, a](a, i.iso)
+            )
+        }
+      }
+  }
 
   ////////////////
   // Public API

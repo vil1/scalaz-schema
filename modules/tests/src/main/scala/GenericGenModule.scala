@@ -9,7 +9,7 @@ import generic.GenericSchemaModule
 
 trait GenericGenModule[R <: Realisation] extends GenericSchemaModule[R] {
 
-  import Schema._
+  import RecursionSchemes._
 
   implicit val genApplicativeInstance: Applicative[Gen] = new Applicative[Gen] {
     override def ap[T, U](fa: => Gen[T])(f: => Gen[T => U]): Gen[U] =
