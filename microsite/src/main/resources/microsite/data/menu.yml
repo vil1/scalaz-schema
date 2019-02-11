@@ -17,6 +17,8 @@ options:
     nested_options:
       - title: "Scalacheck Generators"
         url: interpreters/scalacheck.html
+      - title: "Play JSON"
+        url: interpreters/play-json.html
 
     
 

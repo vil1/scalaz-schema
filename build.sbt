@@ -71,7 +71,7 @@ lazy val tests = project
 
 lazy val microsite = project
   .in(file("microsite"))
-  .dependsOn(core, scalacheck)
+  .dependsOn(core, scalacheck, playJson, tests)
   .enablePlugins(MicrositesPlugin)
   .settings(
     scalacOptions -= "-Yno-imports",

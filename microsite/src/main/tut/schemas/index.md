@@ -25,7 +25,7 @@ This is in fact the very reason why these structures are called Algebraic Data T
 But of course, this encoding isn't very convenient: it is much shorter to write `Long` than `(Unit \/ Unit, ..., Unit \/ Unit)` (with 62 repetitions of `Unit \/ Unit` instead of `...`). We are also used to work with *records* (aka case classes) that have named *fields* instead of mere products (aka tuples) and with *unions* (aka sealed traits) that have named *branches* instead of mere sums (aka `\/` or `Either`).
 
 To account for these usability issues, the library provides:
-* a way to define *primitive types*, allowing forn instance to use `Boolean` instead of `Unit \/ Unit`
+* a way to define *primitive types*, allowing for instance to use `Boolean` instead of `Unit \/ Unit`
 * *records* allowing to represent case classes in terms of a "product of named fields"
 * *unions* allowing to represent sealed trait in terms of a "sum of named branches"
 
@@ -40,27 +40,36 @@ The Schema API abstracts over how these *convenience schemas* are effectively re
 * `SumTermId`: the type used to label *branches* of an *union*.
 * `ProductTermId`: the type used to label *fields* of a *record*.
 
-So in order to build a schema, you must first define a concrete `SchemaModule` implementing these types. For example, if we are dealing with schemas for JSON documents, we can write:
+These abstract types are bundled in the `Realisation` trait, so the first thing we need is an implementation of it:
 
 ```tut:silent
 import scalaz._, schema._
 ```
 
-```tut:silent
-object JsonRealisation extends Realisation {
-  type Prim[A] = JsonPrim[A]
-  type SumTermId = String
+```
+object JsonSchema extends Realisation {
+  type Prim[A]       = JsonPrim[A]
+  type SumTermId     = String
   type ProductTermId = String
 
   sealed trait JsonPrim[A]
-  case object JsonBoolean extends JsonPrim[Boolean]
+  case object JsonBool   extends JsonPrim[Boolean]
   case object JsonNumber extends JsonPrim[BigDecimal]
   case object JsonString extends JsonPrim[String]
-  case object JsonNull extends JsonPrim[Unit]
+  case object JsonNull   extends JsonPrim[Unit]
 }
+```
 
-object JsonModule extends SchemaModule[JsonRealisation.type] {
-  val R = JsonRealisation
+We just define an ADT to represent our primitive types (`JsonPrim`) and set a concrete value for `Prim`, `SumTermId` and `ProductTermId`.
+
+Note that the library already provides the `JsonSchema` realisation defined above, as well as a `ScalaSchema` one. So in practice you might not need to define one by yourself (but you still can if the built-in ones don't fit your needs).
+
+Equiped with this `Realisation` we can now define a *module* that will give us access to the schema API. This is done by implementing the `SchemaModule` trait that takes a type parameter (which must be a subtype of `Realisation`) and has an abstract member `R` of that type.
+
+```tut:silent
+
+object JsonModule extends SchemaModule[JsonSchema.type] {
+  val R = JsonSchema
 }
 ```
 
@@ -70,7 +79,6 @@ We will later use this module to build schemas.
 
 ```tut:silent
 import JsonModule._
-import JsonRealisation._
 ```
 
 Our newly created module provides combinators to build schemas. 
@@ -114,7 +122,7 @@ val boolean = iso(bit, bitToBoolean)
 But representing booleans this way isn't really efficient since we are in a module that has a boolean primitive. So we'd rather use `prim` to build a schema using that primitive:
 
 ```tut
-val boolean = prim(JsonBoolean)
+val boolean = prim(JsonSchema.JsonBool)
 ```
 
 Alright, that's all fun and games, but in real-world applications, we need to represent algebraic data types like the following:
@@ -135,8 +143,8 @@ To build a record from a product of labelled fields, we also need to provide an 
 val tupleToGreeting = Iso[(String, String), Greeting]((Greeting.apply _).tupled)(g => (g.from, g.to))
 
 val greeting = record(
-  "from" -*>: prim(JsonString) :*:
-  "to"   -*>: prim(JsonString),
+  "from" -*>: prim(JsonSchema.JsonString) :*:
+  "to"   -*>: prim(JsonSchema.JsonString),
   tupleToGreeting
 )
 ```
@@ -167,7 +175,7 @@ val message = union(
 
 And *voilà*! We have built a schema for our `Message` ADT.
 
-The library also provides combinator to represent lists (`seq`)  and options (`optional`):
+The library also provides combinators to represent lists (`seq`)  and options (`optional`):
 
 ```tut
 val messageList = seq(message)
