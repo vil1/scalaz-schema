@@ -14,7 +14,7 @@ object JsonExamples {
     import harness._
     import JsonSchema.{ Prim => _, _ }
 
-    val module = new TestModule with JsonModule[JsonSchema.type] {}
+    val module = new TestModule with JsonModule[JsonSchema] {}
 
     import module._
 

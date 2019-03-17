@@ -11,7 +11,7 @@ import Liskov._
 import _root_.play.api.libs.json._
 import _root_.play.api.libs.functional.syntax._
 
-trait PlayJsonModule[R <: Realisation] extends SchemaModule[R] {
+trait PlayJsonModule[R <: Realisation] extends HasInterpreter[R] {
 
   import SchemaF._
 

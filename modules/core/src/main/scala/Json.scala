@@ -11,7 +11,7 @@ object Json {
 
 }
 
-trait JsonModule[R <: Realisation] extends SchemaModule[R] {
+trait JsonModule[R <: Realisation] extends HasInterpreter[R] {
   import Json._
 
   implicit final def encoderInterpreter(

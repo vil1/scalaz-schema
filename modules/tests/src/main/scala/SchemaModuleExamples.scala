@@ -12,11 +12,9 @@ object SchemaModuleExamples {
   def tests[T](harness: Harness[T]): T = {
     import harness._
 
-    val jsonModule = new JsonModule[JsonSchema.type] {
-      override val R = JsonSchema
-    }
+    val jsonModule = new SchemaModule[JsonSchema](JsonSchema) with JsonModule[JsonSchema] {}
 
-    import jsonModule._
+    import jsonModule._, R._
 
     section("Manipulating Schemas")(
       test("imap on IsoSchema shouldn't add new layer") { () =>
@@ -24,7 +22,7 @@ object SchemaModuleExamples {
         def listToSeqIso[A] = Iso[List[A], Seq[A]](_.toSeq)(_.toList)
 
         val adminSchema = record(
-          "rights" -*>: seq(prim(JsonSchema.JsonString)),
+          "rights" -*>: seq(prim(JsonString)),
           Iso[List[String], Admin](Admin.apply)(_.rights)
         )
 

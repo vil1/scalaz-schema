@@ -182,8 +182,7 @@ class HyloInterpreter[S[_[_], _], F[_], G[_]](
   final override val interpret = hyloNT(coalgebra, algebra)
 }
 
-object SchemaF {
-
+trait SchemaFInstances {
   implicit def schemaHFunctor[Prim[_], SumTermId, ProductTermId] =
     new HFunctor[SchemaF[Prim, SumTermId, ProductTermId, ?[_], ?]] {
 
@@ -199,7 +198,11 @@ object SchemaF {
         }
     }
 
-  type FSchema[Prim[_], SumTermId, ProductTermId, A] =
+}
+
+object SchemaF extends SchemaFInstances {
+
+  private type FSchema[Prim[_], SumTermId, ProductTermId, A] =
     Fix[SchemaF[Prim, SumTermId, ProductTermId, ?[_], ?], A]
 
   sealed private[schema] trait LabelledSum_[A, Prim[_], SumTermId, ProductTermId] {
@@ -251,31 +254,37 @@ object SchemaF {
   }
 }
 
-trait SchemaModule[R <: Realisation] {
-
+trait TypeAliases[R <: Realisation] {
   val R: R
 
   import SchemaF._
 
-  type RInterpreter[F[_]] = Interpreter[Schema, F]
+  final type RInterpreter[F[_]] = Interpreter[Schema, F]
 
-  type RSchema[F[_], A] = SchemaF[R.Prim, R.SumTermId, R.ProductTermId, F, A]
+  final type FSchema[Prim[_], SumTermId, ProductTermId, A] =
+    Fix[SchemaF[Prim, SumTermId, ProductTermId, ?[_], ?], A]
 
-  type Schema[A] = FSchema[R.Prim, R.SumTermId, R.ProductTermId, A]
+  final type RSchema[F[_], A] = SchemaF[R.Prim, R.SumTermId, R.ProductTermId, F, A]
 
-  type LabelledSum[A] = LabelledSum_[A, R.Prim, R.SumTermId, R.ProductTermId]
+  final type Schema[A] = FSchema[R.Prim, R.SumTermId, R.ProductTermId, A]
 
-  type LabelledProduct[A] = LabelledProduct_[A, R.Prim, R.SumTermId, R.ProductTermId]
+  final type LabelledSum[A] = LabelledSum_[A, R.Prim, R.SumTermId, R.ProductTermId]
 
-  type ROne[F[_]]            = One[F, R.Prim, R.SumTermId, R.ProductTermId]
-  type Sum[F[_], A, B]       = SumF[F, A, B, R.Prim, R.SumTermId, R.ProductTermId]
-  type Prod[F[_], A, B]      = ProdF[F, A, B, R.Prim, R.SumTermId, R.ProductTermId]
-  type Branch[F[_], A]       = BranchF[F, A, R.Prim, R.SumTermId, R.ProductTermId]
-  type Union[F[_], AE, A]    = UnionF[F, A, AE, R.Prim, R.SumTermId, R.ProductTermId]
-  type Field[F[_], A]        = FieldF[F, A, R.Prim, R.SumTermId, R.ProductTermId]
-  type Record[F[_], An, A]   = RecordF[F, A, An, R.Prim, R.SumTermId, R.ProductTermId]
-  type Sequence[F[_], A]     = SeqF[F, A, R.Prim, R.SumTermId, R.ProductTermId]
-  type IsoSchema[F[_], A, B] = IsoSchemaF[F, A, B, R.Prim, R.SumTermId, R.ProductTermId]
+  final type LabelledProduct[A] = LabelledProduct_[A, R.Prim, R.SumTermId, R.ProductTermId]
+
+  final type ROne[F[_]]            = One[F, R.Prim, R.SumTermId, R.ProductTermId]
+  final type Sum[F[_], A, B]       = SumF[F, A, B, R.Prim, R.SumTermId, R.ProductTermId]
+  final type Prod[F[_], A, B]      = ProdF[F, A, B, R.Prim, R.SumTermId, R.ProductTermId]
+  final type Branch[F[_], A]       = BranchF[F, A, R.Prim, R.SumTermId, R.ProductTermId]
+  final type Union[F[_], AE, A]    = UnionF[F, A, AE, R.Prim, R.SumTermId, R.ProductTermId]
+  final type Field[F[_], A]        = FieldF[F, A, R.Prim, R.SumTermId, R.ProductTermId]
+  final type Record[F[_], An, A]   = RecordF[F, A, An, R.Prim, R.SumTermId, R.ProductTermId]
+  final type Sequence[F[_], A]     = SeqF[F, A, R.Prim, R.SumTermId, R.ProductTermId]
+  final type IsoSchema[F[_], A, B] = IsoSchemaF[F, A, B, R.Prim, R.SumTermId, R.ProductTermId]
+
+}
+
+trait HasInterpreter[R <: Realisation] extends TypeAliases[R] {
 
   object Interpreter {
 
@@ -288,6 +297,10 @@ trait SchemaModule[R <: Realisation] {
 
   }
 
+}
+
+abstract class SchemaModule[R <: Realisation](override val R: R) extends TypeAliases[R] {
+
   ////////////////
   // Public API
   ////////////////
@@ -298,9 +311,9 @@ trait SchemaModule[R <: Realisation] {
 
     def :+: [B](left: Schema[B]): Schema[B \/ A] = Fix(new SumF(left, schema))
 
-    def -*>: (id: R.ProductTermId): LabelledProduct[A] = LabelledProduct1(id, schema)
+    def -*>: (id: R.ProductTermId): LabelledProduct[A] = SchemaF.LabelledProduct1(id, schema)
 
-    def -+>: (id: R.SumTermId): LabelledSum[A] = LabelledSum1(id, schema)
+    def -+>: (id: R.SumTermId): LabelledSum[A] = SchemaF.LabelledSum1(id, schema)
 
     def to[F[_]](implicit interpreter: RInterpreter[F]): F[A] = interpreter.interpret(schema)
 

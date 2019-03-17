@@ -19,13 +19,12 @@ object Person {
   val personToTupleIso = Iso[Person, (Seq[Char], Option[Role])](f)(g)
 }
 
-trait TestModule extends SchemaModule[JsonSchema.type] {
-  val R = JsonSchema
+abstract class TestModule extends SchemaModule[JsonSchema](JsonSchema) {
 
   type PersonTuple = (Seq[Char], Option[Role])
 
   val user = record(
-    "active" -*>: prim(JsonSchema.JsonBool) :*: "boss" -*>: self(person),
+    "active" -*>: prim(R.JsonBool) :*: "boss" -*>: self(person),
     Iso[(Boolean, Person), User]((User.apply _).tupled)(u => (u.active, u.boss))
   )
 

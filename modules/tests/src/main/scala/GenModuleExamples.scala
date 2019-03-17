@@ -28,7 +28,7 @@ object GenModuleExamples {
 
     section("Generating Gens")(
       test("Convert Schema to Gen") { () =>
-        val module = new TestModule with GenModule[JsonSchema.type] with PrimToGen {}
+        val module = new TestModule with GenModule[JsonSchema] with PrimToGen {}
         import module._
 
         val personGen: Gen[PersonTuple] = personTupleSchema.to[Gen]
@@ -58,7 +58,7 @@ object GenModuleExamples {
         if (result.success) Succeed else Fail(List(Right(result.status.toString)))
       },
       test("Convert Schema to Gen with Generic Module") { () =>
-        val module = new TestModule with GenericGenModule[JsonSchema.type] with PrimToGen {}
+        val module = new TestModule with GenericGenModule[JsonSchema] with PrimToGen {}
         import module._
         val personGen: Gen[PersonTuple] = personTupleSchema.to[Gen]
 

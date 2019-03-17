@@ -6,7 +6,7 @@ package generic
 
 import recursion._
 
-trait GenericSchemaModule[R <: Realisation] extends SchemaModule[R] {
+trait GenericSchemaModule[R <: Realisation] extends HasInterpreter[R] {
 
   def covariantTargetFunctor[H[_]](
     primNT: R.Prim ~> H,

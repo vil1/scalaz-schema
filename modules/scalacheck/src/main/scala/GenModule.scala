@@ -6,7 +6,7 @@ package scalacheck
 
 import org.scalacheck._
 
-trait GenModule[R <: Realisation] extends SchemaModule[R] {
+trait GenModule[R <: Realisation] extends HasInterpreter[R] {
 
   implicit final def genInterpreter(
     implicit primNT: R.Prim ~> Gen
