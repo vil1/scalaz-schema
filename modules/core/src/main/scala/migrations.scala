@@ -21,27 +21,15 @@ sealed trait MigrationStep[Prim[_], SumTermId, ProductTermId] {
     A
   ]
 
-  type HEnvSchema[A] = HEnvT[Unit , SchemaH, HSchema, A]
+  type HEnvSchema[F[_], A] = HEnvTK[Option , SchemaH, F, A]
 
-  def algebra: HAlgebra[SchemaH, HEnvSchema] = new (SchemaH[HEnvSchema, ?] ~> HEnvSchema) {
+  def algebra: HAlgebra[HEnvSchema, HSchema] = new (HEnvSchema[HSchema, ?] ~> HSchema) {
 
-    def apply[A](schema: SchemaH[HSchema, A]): HEnvSchema[A] = schema match {
-      case x: PrimSchemaF[HSchema, a, Prim, SumTermId, ProductTermId]            => HEnvT((), x)
-      case x: SumF[HSchema, a, b, Prim, SumTermId, ProductTermId]                => HEnvT((), x)
-      case x: ProdF[HSchema, a, b, Prim, SumTermId, ProductTermId]               => HEnvT((), x)
-      case x: IsoSchemaF[HSchema, a0, a, Prim, SumTermId, ProductTermId]         => HEnvT((), x)
-      case x: RecordF[HSchema, a0, a, Prim, SumTermId, ProductTermId]            => HEnvT((), x)
-      case x: SeqF[HSchema, a, Prim, SumTermId, ProductTermId]                   => HEnvT((), x)
-      case x: FieldF[HSchema, a, Prim, SumTermId, ProductTermId]                 => HEnvT((), x)
-      case x: UnionF[HSchema, a0, a, Prim, SumTermId, ProductTermId]             => HEnvT((), x)
-      case x: BranchF[HSchema, a, Prim, SumTermId, ProductTermId]                => HEnvT((), x)
-      case x: One[HSchema, Prim, SumTermId, ProductTermId]                       => HEnvT((), x)
-      case x: SelfReference[HSchema, HSchema, a, Prim, SumTermId, ProductTermId] => HEnvT((), x)
-    }
+    def apply[A](env: HEnvSchema[HSchema, A]): HSchema[A] = env.ask.fold[HSchema[A]](Fix(env.fa))(a => Fix(ConstSchemaF(a)))
   }
 
-  def coalgebra: HCoalgebra[SchemaH, HSchema] = new (HSchema ~> SchemaH[HSchema, ?]) {
-    def apply[A](schema: HSchema[A]): SchemaH[HSchema, A] = ???
+  def coalgebra: HCoalgebra[HEnvSchema, HSchema] = new (HSchema ~> HEnvSchema[HSchema, ?]) {
+    def apply[A](schema: HSchema[A]): HEnvSchema[HSchema, A] = ???
   }
 }
 

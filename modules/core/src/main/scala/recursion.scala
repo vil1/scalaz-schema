@@ -22,9 +22,24 @@ package recursion {
         }
       }
   }
+
+  final case class HEnvTK[E[_], F[_[_], _], G[_], I](ask: E[I], fa: F[G, I])
+
+  object HEnvTK {
+    implicit def hfunctor[E[_], F[_[_], _]](
+      implicit F: HFunctor[F]
+    ): HFunctor[HEnvTK[E, F, ?[_], ?]] = new HFunctor[HEnvTK[E, F, ?[_], ?]] {
+
+      def hmap[M[_], N[_]](nt: M ~> N) = new (HEnvTK[E, F, M, ?] ~> HEnvTK[E, F, N, ?]) {
+        def apply[I](fm: HEnvTK[E, F, M, I]) = HEnvTK(fm.ask, F.hmap(nt)(fm.fa))
+      }
+    }
+  }
+
 }
 
 package object recursion {
+
   type HAlgebra[F[_[_], _], G[_]]   = F[G, ?] ~> G
   type HCoalgebra[F[_[_], _], G[_]] = G ~> F[G, ?]
 
