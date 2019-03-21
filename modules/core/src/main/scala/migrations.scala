@@ -35,16 +35,20 @@ object MigrationStep{
 
 final case class AddField[A, Prim[_], SumTermId, ProductTermId](
   name: ProductTermId,
-  schema: FSchema[Prim, SumTermId, ProductTermId, A],
+//schema: FSchema[Prim, SumTermId, ProductTermId, A],
   default: A
 ) extends MigrationStep[Prim, SumTermId, ProductTermId, HEnvTK[Option , SchemaF[Prim, SumTermId, ProductTermId, ?[_], ?], ?[_], ?]] {
   type HEnvSchema[F[_], A] = HEnvTK[Option , SchemaH, F, A]
 
   override val algebra   = new (HEnvSchema[HSchema, ?] ~> HSchema) {
-    def apply[A](env: HEnvSchema[HSchema, A]): HSchema[A] = env.ask.fold[HSchema[A]](Fix(env.fa))(a => Fix(ConstSchemaF(a)))
+    def apply[X](env: HEnvSchema[HSchema, X]): HSchema[X] = env.ask.fold[HSchema[X]](Fix(env.fa))(x => Fix(ConstSchemaF(x)))
   }
   override val coalgebra  = new (HSchema ~> HEnvSchema[HSchema, ?]) {
-    def apply[A](schema: HSchema[A]): HEnvSchema[HSchema, A] = ???
+    def apply[X](schema: HSchema[X]): HEnvSchema[HSchema, X] = schema.unFix match {
+      //How do we proof that default actually has the correct type here? right now we don't at all and default could be whatever
+      case x:FieldF[HSchema, X, Prim, SumTermId, ProductTermId] => if(x.id == name) HEnvTK(Some(default), x) else HEnvTK(None, x)
+      case x => HEnvTK(None, x)
+    }
   }
 }
 
