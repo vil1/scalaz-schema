@@ -34,6 +34,7 @@ trait GenericSchemaModule[R <: Realisation] extends SchemaModule[R] {
           case st: Branch[H, a]          => sumLabelNT(st)
           case _: ROne[H]                => H.pure(())
           case ref @ SelfReference(_, _) => delay(() => ref.unroll)
+          case x: ConstSchema[H, a]      => H.pure(x.value)
         }
     }
 
@@ -64,6 +65,7 @@ trait GenericSchemaModule[R <: Realisation] extends SchemaModule[R] {
           case st: Branch[H, a]          => sumLabelNT(st)
           case _: ROne[H]                => H.xproduct0[Unit](())
           case ref @ SelfReference(_, _) => delay(() => ref.unroll)
+          case x: ConstSchema[H, a]      => H.xproduct0(x.value)
         }
     }
 }

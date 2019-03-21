@@ -21,11 +21,12 @@ sealed trait MigrationStep[Prim[_], SumTermId, ProductTermId] {
     A
   ]
 
-  type HEnvSchema[F[_], A] = HEnvTK[Option , SchemaH, F, A]
+  type HEnvSchema[F[_], A] = HEnvTK[Option, SchemaH, F, A]
 
   def algebra: HAlgebra[HEnvSchema, HSchema] = new (HEnvSchema[HSchema, ?] ~> HSchema) {
 
-    def apply[A](env: HEnvSchema[HSchema, A]): HSchema[A] = env.ask.fold[HSchema[A]](Fix(env.fa))(a => Fix(ConstSchemaF(a)))
+    def apply[A](env: HEnvSchema[HSchema, A]): HSchema[A] =
+      env.ask.fold[HSchema[A]](Fix(env.fa))(a => Fix(ConstSchemaF(a)))
   }
 
   def coalgebra: HCoalgebra[HEnvSchema, HSchema] = new (HSchema ~> HEnvSchema[HSchema, ?]) {

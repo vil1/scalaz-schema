@@ -282,6 +282,7 @@ trait SchemaModule[R <: Realisation] {
   type Record[F[_], An, A]   = RecordF[F, A, An, R.Prim, R.SumTermId, R.ProductTermId]
   type Sequence[F[_], A]     = SeqF[F, A, R.Prim, R.SumTermId, R.ProductTermId]
   type IsoSchema[F[_], A, B] = IsoSchemaF[F, A, B, R.Prim, R.SumTermId, R.ProductTermId]
+  type ConstSchema[F[_], A]  = ConstSchemaF[F, A, R.Prim, R.SumTermId, R.ProductTermId]
 
   object Interpreter {
 
