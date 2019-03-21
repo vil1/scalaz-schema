@@ -30,6 +30,7 @@ trait GenModule[R <: Realisation] extends SchemaModule[R] {
           case BranchF(_, base)          => base
           case One()                     => Gen.const(())
           case ref @ SelfReference(_, _) => Gen.delay(ref.unroll)
+          case ConstSchemaF(_, a)        => Gen.const(a)
         }
 
     })

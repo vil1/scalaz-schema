@@ -41,6 +41,7 @@ trait JsonModule[R <: Realisation] extends SchemaModule[R] {
           case BranchF(id, base)         => makeField(branchLabel(id)).compose(base)
           case One()                     => (_ => "null")
           case ref @ SelfReference(_, _) => (a => ref.unroll(a))
+          case ConstSchemaF(base, a)     => _ => base(a)
         }
     })
 }

@@ -133,9 +133,12 @@ final case class IsoSchemaF[F[_], A0, A, Prim[_], SumTermId, ProductTermId](
 }
 
 final case class ConstSchemaF[F[_], A, Prim[_], SumTermId, ProductTermId](
+  base: F[A],
   value: A
 ) extends SchemaF[Prim, SumTermId, ProductTermId, F, A] {
-  def hmap[G[_]](nt: F ~> G): SchemaF[Prim, SumTermId, ProductTermId, G, A] = ConstSchemaF(value)
+
+  def hmap[G[_]](nt: F ~> G): SchemaF[Prim, SumTermId, ProductTermId, G, A] =
+    ConstSchemaF(nt(base), value)
 }
 
 final case class SelfReference[F[_], H[_], A, Prim[_], SumTermId, ProductTermId](

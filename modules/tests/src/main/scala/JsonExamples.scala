@@ -34,7 +34,8 @@ object JsonExamples {
           }
         }
 
-        val serializer: Encoder[Person] = person.to[Encoder]
+        val serializer: Encoder[Person]   = person.to[Encoder]
+        val serializerV1: Encoder[Person] = personV1.to[Encoder]
 
 //        type PersonTuple = (Seq[Char], Option[Role])
         val personTupleSchema = iso(person, Person.personToTupleIso)
@@ -55,7 +56,10 @@ object JsonExamples {
             (res, testCase) match {
               case (Succeed, (data, expected)) => {
                 val json    = serializer(data)
+                val jsonV1  = serializerV1(data)
                 val isoJson = isoSerializer(Person.personToTupleIso.reverse(data))
+
+                println(jsonV1)
 
                 val same    = matchJsonStrings(json, expected)
                 val isoSame = matchJsonStrings(isoJson, expected)

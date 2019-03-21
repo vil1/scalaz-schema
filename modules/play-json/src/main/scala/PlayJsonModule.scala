@@ -127,6 +127,7 @@ trait PlayJsonModule[R <: Realisation] extends SchemaModule[R] {
             case i: IsoSchema[Reads, a0, A] =>
               i.base.map(i.iso.get)
             case ref @ SelfReference(_, _) => Reads(ref.unroll.reads)
+            case ConstSchemaF(_, a)        => Reads(_ => JsSuccess(a))
           }
         }
       )
@@ -167,6 +168,7 @@ trait PlayJsonModule[R <: Realisation] extends SchemaModule[R] {
             case SeqF(elem)                 => Writes(seq => JsArray(seq.map(elem.writes(_))))
             case i: IsoSchema[Writes, a, A] => i.base.contramap(i.iso.reverseGet)
             case ref @ SelfReference(_, _)  => Writes(ref.unroll.writes)
+            case ConstSchemaF(base, a)      => Writes(_ => base.writes(a))
           }
 
         }
