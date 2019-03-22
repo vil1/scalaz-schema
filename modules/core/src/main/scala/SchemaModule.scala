@@ -366,31 +366,62 @@ trait SchemaModule[R <: Realisation] {
   type PrimSchema[F[_, _], A]       = PrimSchemaF[F, A, R.Prim, R.SumTermId, R.ProductTermId]
 
   object Optics {
-      sealed trait Selector[AT,A]{
-        type Out
-        def access(schema:Schema[AT, A]):Either[String, Out]
-      }
-      object Selector {
-        type Aux[AT0, A0, Out0] = Schema[AT0, A0] {
-          type Out = Out0
+    type Id[A] = A
+
+    sealed trait Selector[G[_], AT, B0, B1] {
+      def access(schema: Schema[G[AT], B0]): Either[String, Schema[AT, B1]]
+
+      /*def compose[H[_], AT1, B01, B11](s:Selector[H, AT1, B01, B11]):Selector[λ[X => G[H[X]]], AT1, B0, B11] = Composed(
+          schema => access(schema).flatMap(s.access)
+        )*/
+    }
+
+    final case class Composed[G[_], AT, B0, B1, H[_], AT1, B01, B11](
+      accessF: Schema[G[H[AT1]], B0] => Either[String, Schema[AT1, B11]]
+    ) extends Selector[λ[X => G[H[X]]], AT1, B0, B11] {
+      override def access(schema: Schema[G[H[AT1]], B0]): Either[String, Schema[AT1, B11]] =
+        accessF(schema)
+    }
+
+    final case class This[AT, A]() extends Selector[Id, AT, A, A] {
+      override def access(schema: Schema[AT, A]): Either[String, Schema[AT, A]] = Right(schema)
+    }
+    final case class SumL[AT, A, BT, B]() extends Selector[λ[X => X \/ BT], AT, A \/ B, AT] {
+      override def access(schema: Schema[AT \/ BT, A \/ B]): Either[String, Schema[AT, A]] =
+        schema.unFix match {
+          case x: Sum[Schema, AT, A, BT, B] => Right(x.left)
+          case _                            => Left("err")
         }
-      }
-
-
-      final case class This[AT, A]() extends Selector[AT, A]{
-        override type Out = Schema[AT, A]
-        override def access(schema:Schema[AT, A]):Either[String,Schema[AT, A]] = Right(schema)
-      }
-      final case class Unwrap[AT, A, Out0](next:Selector.Aux[AT,A,Out0]) extends Selector[Iso[AT, A], A]{
-        override type Out = Out0
-        override def access(schema:Schema[Iso[AT, A], A]):Out = schema.unFix match {
-          case is:IsoSchema[Schema, Iso[AT, A], a0, A] => next.access(is.base)
-          _ => Left("error")
+    }
+    final case class SumR[AT, A, BT, B]() extends Selector[λ[X => AT \/ X], BT, A \/ B, BT] {
+      override def access(schema: Schema[AT \/ BT, A \/ B]): Either[String, Schema[BT, B]] =
+        schema.unFix match {
+          case x: Sum[Schema, AT, A, BT, B] => Right(x.right)
+          case _                            => Left("err")
         }
+    }
+    final case class ProdL[AT, A, BT, B]() extends Selector[λ[X => (X, BT)], AT, (A, B), AT] {
+      override def access(schema: Schema[(AT, BT), (A, B)]): Either[String, Schema[AT, A]] =
+        schema.unFix match {
+          case x: Prod[Schema, AT, A, BT, B] => Right(x.left)
+          case _                             => Left("err")
+        }
+    }
+    final case class ProdR[AT, A, BT, B]() extends Selector[λ[X => (AT, X)], BT, (A, B), BT] {
+      override def access(schema: Schema[(AT, BT), (A, B)]): Either[String, Schema[BT, B]] =
+        schema.unFix match {
+          case x: Prod[Schema, AT, A, BT, B] => Right(x.right)
+          case _                             => Left("err")
+        }
+    }
+    final case class UnwrapIso[AT, A0, A]() extends Selector[λ[X => Iso[X, A]], AT, A, A0] {
+      override def access(schema: Schema[Iso[AT, A], A]): Either[String, Schema[AT, A0]] =
+        schema.unFix match {
+          case x: IsoSchema[Schema, AT, A0, A] => Right(x.base)
+          case _                               => Left("err")
+        }
+    }
 
-      }
-
-      
   }
 
   object BiInterpreter {

@@ -21,6 +21,7 @@ lazy val core = project
   .in(file("modules/core"))
   .settings(
     name := "scalaz-schema-core",
+    scalacOptions -= "-Xfatal-warnings",
     libraryDependencies ++= Seq(
       "com.github.julien-truffaut" %% "monocle-core"  % monocleVersion,
       "com.github.julien-truffaut" %% "monocle-macro" % monocleVersion
