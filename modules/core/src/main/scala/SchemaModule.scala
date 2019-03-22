@@ -365,6 +365,34 @@ trait SchemaModule[R <: Realisation] {
   type ConstSchema[F[_, _], AT, A]  = ConstSchemaF[F, AT, A, R.Prim, R.SumTermId, R.ProductTermId]
   type PrimSchema[F[_, _], A]       = PrimSchemaF[F, A, R.Prim, R.SumTermId, R.ProductTermId]
 
+  object Optics {
+      sealed trait Selector[AT,A]{
+        type Out
+        def access(schema:Schema[AT, A]):Either[String, Out]
+      }
+      object Selector {
+        type Aux[AT0, A0, Out0] = Schema[AT0, A0] {
+          type Out = Out0
+        }
+      }
+
+
+      final case class This[AT, A]() extends Selector[AT, A]{
+        override type Out = Schema[AT, A]
+        override def access(schema:Schema[AT, A]):Either[String,Schema[AT, A]] = Right(schema)
+      }
+      final case class Unwrap[AT, A, Out0](next:Selector.Aux[AT,A,Out0]) extends Selector[Iso[AT, A], A]{
+        override type Out = Out0
+        override def access(schema:Schema[Iso[AT, A], A]):Out = schema.unFix match {
+          case is:IsoSchema[Schema, Iso[AT, A], a0, A] => next.access(is.base)
+          _ => Left("error")
+        }
+
+      }
+
+      
+  }
+
   object BiInterpreter {
 
     def cata[S[_[_, _], _, _], F[_, _]](alg: HBiAlgebra[S, F])(implicit ev: HBiFunctor[S]) =
