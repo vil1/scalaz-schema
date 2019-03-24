@@ -33,6 +33,9 @@ object BiNat {
 import BiNat._
  */
 
+abstract class +[A, B] {}
+abstract class *[A, B] {}
+
 import scalaz.{ BiNaturalTransformation => ~>> }
 
 sealed trait SchemaF[Prim[_], SumTermId, ProductTermId, F[_, _], AT, A] {
@@ -56,9 +59,9 @@ final case class One[F[_, _], Prim[_], SumTermId, ProductTermId]()
 final case class SumF[F[_, _], AT, A, BT, B, Prim[_], SumTermId, ProductTermId](
   left: F[AT, A],
   right: F[BT, B]
-) extends SchemaF[Prim, SumTermId, ProductTermId, F, AT \/ BT, A \/ B] {
+) extends SchemaF[Prim, SumTermId, ProductTermId, F, AT + BT, A \/ B] {
 
-  def hmap[G[_, _]](nt: F ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, AT \/ BT, A \/ B] =
+  def hmap[G[_, _]](nt: F ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, AT + BT, A \/ B] =
     SumF(nt(left), nt(right))
   override def toString: String = s"$left :+: $right"
 }
@@ -69,9 +72,9 @@ final case class SumF[F[_, _], AT, A, BT, B, Prim[_], SumTermId, ProductTermId](
 final case class ProdF[F[_, _], AT, A, BT, B, Prim[_], SumTermId, ProductTermId](
   left: F[AT, A],
   right: F[BT, B]
-) extends SchemaF[Prim, SumTermId, ProductTermId, F, (AT, BT), (A, B)] {
+) extends SchemaF[Prim, SumTermId, ProductTermId, F, AT * BT, (A, B)] {
 
-  def hmap[G[_, _]](nt: F ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, (AT, BT), (A, B)] =
+  def hmap[G[_, _]](nt: F ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, AT * BT, (A, B)] =
     ProdF(nt(left), nt(right))
   override def toString: String = s"$left :*: $right"
 }
@@ -94,9 +97,9 @@ final case class PrimSchemaF[F[_, _], A, Prim[_], SumTermId, ProductTermId](prim
 final case class BranchF[F[_, _], AT, A, Prim[_], SumTermId, ProductTermId](
   id: SumTermId,
   schema: F[AT, A]
-) extends SchemaF[Prim, SumTermId, ProductTermId, F, (SumTermId, AT), A] {
+) extends SchemaF[Prim, SumTermId, ProductTermId, F, AT, A] {
 
-  def hmap[G[_, _]](nt: F ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, (SumTermId, AT), A] =
+  def hmap[G[_, _]](nt: F ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, AT, A] =
     BranchF(id, nt(schema))
 }
 
@@ -119,11 +122,11 @@ sealed abstract case class UnionF[F[_, _], A, AE, Prim[_], SumTermId, ProductTer
 final case class FieldF[F[_, _], AT, A, Prim[_], SumTermId, ProductTermId](
   id: ProductTermId,
   schema: F[AT, A]
-) extends SchemaF[Prim, SumTermId, ProductTermId, F, (ProductTermId, AT), A] {
+) extends SchemaF[Prim, SumTermId, ProductTermId, F, AT, A] {
 
   def hmap[G[_, _]](
     nt: F ~>> G
-  ): SchemaF[Prim, SumTermId, ProductTermId, G, (ProductTermId, AT), A] =
+  ): SchemaF[Prim, SumTermId, ProductTermId, G, AT, A] =
     FieldF(id, nt(schema))
 }
 
@@ -134,9 +137,9 @@ final case class FieldF[F[_, _], AT, A, Prim[_], SumTermId, ProductTermId](
 sealed abstract case class RecordF[F[_, _], A, AP, Prim[_], SumTermId, ProductTermId](
   fields: F[AP, AP],
   iso: Iso[AP, A]
-) extends SchemaF[Prim, SumTermId, ProductTermId, F, Iso[AP, A], A] {
+) extends SchemaF[Prim, SumTermId, ProductTermId, F, AP, A] {
 
-  def hmap[G[_, _]](nt: F ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, Iso[AP, A], A] =
+  def hmap[G[_, _]](nt: F ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, AP, A] =
     new RecordF[G, A, AP, Prim, SumTermId, ProductTermId](nt(fields), iso) {}
 }
 
@@ -144,9 +147,9 @@ sealed abstract case class RecordF[F[_, _], A, AP, Prim[_], SumTermId, ProductTe
  * A sequence
  */
 final case class SeqF[F[_, _], AT, A, Prim[_], SumTermId, ProductTermId](element: F[AT, A])
-    extends SchemaF[Prim, SumTermId, ProductTermId, F, List[AT], List[A]] {
+    extends SchemaF[Prim, SumTermId, ProductTermId, F, AT, List[A]] {
 
-  def hmap[G[_, _]](nt: F ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, List[AT], List[A]] =
+  def hmap[G[_, _]](nt: F ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, AT, List[A]] =
     SeqF(nt(element))
 }
 
@@ -157,9 +160,9 @@ final case class SeqF[F[_, _], AT, A, Prim[_], SumTermId, ProductTermId](element
 final case class IsoSchemaF[F[_, _], AT, A0, A, Prim[_], SumTermId, ProductTermId](
   base: F[AT, A0],
   iso: Iso[A0, A]
-) extends SchemaF[Prim, SumTermId, ProductTermId, F, Iso[AT, A], A] {
+) extends SchemaF[Prim, SumTermId, ProductTermId, F, AT, A] {
 
-  def hmap[G[_, _]](nt: F ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, Iso[AT, A], A] =
+  def hmap[G[_, _]](nt: F ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, AT, A] =
     IsoSchemaF(nt(base), iso)
 }
 
@@ -292,13 +295,13 @@ object SchemaF {
 
     def :+: [BT, B](
       l: LabelledSum_[BT, B, Prim, SumTermId, ProductTermId]
-    ): LabelledSum_[BT \/ AT, B \/ A, Prim, SumTermId, ProductTermId] = LabelledSum2(l, this)
+    ): LabelledSum_[BT + AT, B \/ A, Prim, SumTermId, ProductTermId] = LabelledSum2(l, this)
   }
 
   final private[schema] case class LabelledSum1[AT, A, Prim[_], SumTermId, ProductTermId](
     id: SumTermId,
     schema: FSchema[Prim, SumTermId, ProductTermId, AT, A]
-  ) extends LabelledSum_[(SumTermId, AT), A, Prim, SumTermId, ProductTermId] {
+  ) extends LabelledSum_[AT, A, Prim, SumTermId, ProductTermId] {
     def toSchema = BiFix(BranchF(id, schema))
 
   }
@@ -306,7 +309,7 @@ object SchemaF {
   final private[schema] case class LabelledSum2[AT, A, BT, B, Prim[_], SumTermId, ProductTermId](
     l: LabelledSum_[AT, A, Prim, SumTermId, ProductTermId],
     r: LabelledSum_[BT, B, Prim, SumTermId, ProductTermId]
-  ) extends LabelledSum_[AT \/ BT, A \/ B, Prim, SumTermId, ProductTermId] {
+  ) extends LabelledSum_[AT + BT, A \/ B, Prim, SumTermId, ProductTermId] {
     def toSchema = BiFix(new SumF(l.toSchema, r.toSchema))
 
   }
@@ -316,14 +319,14 @@ object SchemaF {
 
     def :*: [BT, B](
       l: LabelledProduct_[BT, B, Prim, SumTermId, ProductTermId]
-    ): LabelledProduct_[(BT, AT), (B, A), Prim, SumTermId, ProductTermId] =
+    ): LabelledProduct_[BT * AT, (B, A), Prim, SumTermId, ProductTermId] =
       LabelledProduct2(l, this)
   }
 
   final private[schema] case class LabelledProduct1[AT, A, Prim[_], SumTermId, ProductTermId](
     id: ProductTermId,
     schema: FSchema[Prim, SumTermId, ProductTermId, AT, A]
-  ) extends LabelledProduct_[(ProductTermId, AT), A, Prim, SumTermId, ProductTermId] {
+  ) extends LabelledProduct_[AT, A, Prim, SumTermId, ProductTermId] {
     def toSchema = BiFix(FieldF(id, schema))
 
   }
@@ -331,7 +334,7 @@ object SchemaF {
   final private[schema] case class LabelledProduct2[AT, A, BT, B, Prim[_], SumTermId, ProductTermId](
     l: LabelledProduct_[AT, A, Prim, SumTermId, ProductTermId],
     r: LabelledProduct_[BT, B, Prim, SumTermId, ProductTermId]
-  ) extends LabelledProduct_[(AT, BT), (A, B), Prim, SumTermId, ProductTermId] {
+  ) extends LabelledProduct_[AT * BT, (A, B), Prim, SumTermId, ProductTermId] {
     def toSchema = BiFix(new ProdF(l.toSchema, r.toSchema))
 
   }
@@ -365,65 +368,6 @@ trait SchemaModule[R <: Realisation] {
   type ConstSchema[F[_, _], AT, A]  = ConstSchemaF[F, AT, A, R.Prim, R.SumTermId, R.ProductTermId]
   type PrimSchema[F[_, _], A]       = PrimSchemaF[F, A, R.Prim, R.SumTermId, R.ProductTermId]
 
-  object Optics {
-    type Id[A] = A
-
-    sealed trait Selector[G[_], AT, B0, B1] {
-      def access(schema: Schema[G[AT], B0]): Either[String, Schema[AT, B1]]
-
-      /*def compose[H[_], AT1, B01, B11](s:Selector[H, AT1, B01, B11]):Selector[λ[X => G[H[X]]], AT1, B0, B11] = Composed(
-          schema => access(schema).flatMap(s.access)
-        )*/
-    }
-
-    final case class Composed[G[_], AT, B0, B1, H[_], AT1, B01, B11](
-      accessF: Schema[G[H[AT1]], B0] => Either[String, Schema[AT1, B11]]
-    ) extends Selector[λ[X => G[H[X]]], AT1, B0, B11] {
-      override def access(schema: Schema[G[H[AT1]], B0]): Either[String, Schema[AT1, B11]] =
-        accessF(schema)
-    }
-
-    final case class This[AT, A]() extends Selector[Id, AT, A, A] {
-      override def access(schema: Schema[AT, A]): Either[String, Schema[AT, A]] = Right(schema)
-    }
-    final case class SumL[AT, A, BT, B]() extends Selector[λ[X => X \/ BT], AT, A \/ B, AT] {
-      override def access(schema: Schema[AT \/ BT, A \/ B]): Either[String, Schema[AT, A]] =
-        schema.unFix match {
-          case x: Sum[Schema, AT, A, BT, B] => Right(x.left)
-          case _                            => Left("err")
-        }
-    }
-    final case class SumR[AT, A, BT, B]() extends Selector[λ[X => AT \/ X], BT, A \/ B, BT] {
-      override def access(schema: Schema[AT \/ BT, A \/ B]): Either[String, Schema[BT, B]] =
-        schema.unFix match {
-          case x: Sum[Schema, AT, A, BT, B] => Right(x.right)
-          case _                            => Left("err")
-        }
-    }
-    final case class ProdL[AT, A, BT, B]() extends Selector[λ[X => (X, BT)], AT, (A, B), AT] {
-      override def access(schema: Schema[(AT, BT), (A, B)]): Either[String, Schema[AT, A]] =
-        schema.unFix match {
-          case x: Prod[Schema, AT, A, BT, B] => Right(x.left)
-          case _                             => Left("err")
-        }
-    }
-    final case class ProdR[AT, A, BT, B]() extends Selector[λ[X => (AT, X)], BT, (A, B), BT] {
-      override def access(schema: Schema[(AT, BT), (A, B)]): Either[String, Schema[BT, B]] =
-        schema.unFix match {
-          case x: Prod[Schema, AT, A, BT, B] => Right(x.right)
-          case _                             => Left("err")
-        }
-    }
-    final case class UnwrapIso[AT, A0, A]() extends Selector[λ[X => Iso[X, A]], AT, A, A0] {
-      override def access(schema: Schema[Iso[AT, A], A]): Either[String, Schema[AT, A0]] =
-        schema.unFix match {
-          case x: IsoSchema[Schema, AT, A0, A] => Right(x.base)
-          case _                               => Left("err")
-        }
-    }
-
-  }
-
   object BiInterpreter {
 
     def cata[S[_[_, _], _, _], F[_, _]](alg: HBiAlgebra[S, F])(implicit ev: HBiFunctor[S]) =
@@ -451,26 +395,26 @@ trait SchemaModule[R <: Realisation] {
 
   implicit final class SchemaSyntax[AT, A](schema: Schema[AT, A]) {
 
-    def :*: [BT, B](left: Schema[BT, B]): Schema[(BT, AT), (B, A)] = BiFix(new ProdF(left, schema))
+    def :*: [BT, B](left: Schema[BT, B]): Schema[BT * AT, (B, A)] = BiFix(new ProdF(left, schema))
 
-    def :+: [BT, B](left: Schema[BT, B]): Schema[BT \/ AT, B \/ A] = BiFix(new SumF(left, schema))
+    def :+: [BT, B](left: Schema[BT, B]): Schema[BT + AT, B \/ A] = BiFix(new SumF(left, schema))
 
-    def -*>: (id: R.ProductTermId): LabelledProduct[(R.ProductTermId, AT), A] =
+    def -*>: (id: R.ProductTermId): LabelledProduct[AT, A] =
       LabelledProduct1(id, schema)
 
-    def -+>: (id: R.SumTermId): LabelledSum[(R.SumTermId, AT), A] = LabelledSum1(id, schema)
+    def -+>: (id: R.SumTermId): LabelledSum[AT, A] = LabelledSum1(id, schema)
 
     def to[F[_, _]](implicit interpreter: RInterpreter[F]): F[AT, A] = interpreter.interpret(schema)
 
-    def imap[B](_iso: Iso[A, B]): Schema[Iso[AT, B], B] = (schema.unFix) match {
+    def imap[B](_iso: Iso[A, B]): Schema[AT, B] = (schema.unFix) match {
       case is: IsoSchemaF[
-            FSchema[R.Prim @unchecked, R.SumTermId @unchecked, R.ProductTermId @unchecked, ?, ?] @unchecked,
-            AT @unchecked,
+            FSchema[R.Prim, R.SumTermId, R.ProductTermId, ?, ?],
+            AT,
             _,
-            A @unchecked,
-            R.Prim @unchecked,
-            R.SumTermId @unchecked,
-            R.ProductTermId @unchecked
+            A,
+            R.Prim,
+            R.SumTermId,
+            R.ProductTermId
           ] =>
         iso(is.base, is.iso.composeIso(_iso))
       case _ => BiFix(IsoSchemaF(schema, _iso))
@@ -503,8 +447,8 @@ trait SchemaModule[R <: Realisation] {
       ](choices.toSchema, iso) {}
     )
 
-  final def optional[AT, A](aSchema: Schema[AT, A]): Schema[Iso[AT \/ Unit, Option[A]], Option[A]] =
-    iso[AT \/ Unit, A \/ Unit, Option[A]](
+  final def optional[AT, A](aSchema: Schema[AT, A]): Schema[AT + Unit, Option[A]] =
+    iso[AT + Unit, A \/ Unit, Option[A]](
       BiFix(
         new SumF[
           FSchema[R.Prim, R.SumTermId, R.ProductTermId, ?, ?],
@@ -520,7 +464,7 @@ trait SchemaModule[R <: Realisation] {
       Iso[A \/ Unit, Option[A]](_.swap.toOption)(_.fold[A \/ Unit](\/-(()))(-\/(_)))
     )
 
-  final def record[A, An](terms: LabelledProduct[An, An], isoA: Iso[An, A]): Schema[Iso[An, A], A] =
+  final def record[A, An](terms: LabelledProduct[An, An], isoA: Iso[An, A]): Schema[An, A] =
     BiFix(
       new RecordF[
         FSchema[R.Prim, R.SumTermId, R.ProductTermId, ?, ?],
@@ -532,7 +476,7 @@ trait SchemaModule[R <: Realisation] {
       ](terms.toSchema, isoA) {}
     )
 
-  final def seq[AT, A](element: Schema[AT, A]): Schema[List[AT], List[A]] =
+  final def seq[AT, A](element: Schema[AT, A]): Schema[AT, List[A]] =
     BiFix(
       SeqF[
         FSchema[R.Prim, R.SumTermId, R.ProductTermId, ?, ?],
@@ -544,7 +488,7 @@ trait SchemaModule[R <: Realisation] {
       ](element)
     )
 
-  final def iso[AT, A0, A](base: Schema[AT, A0], iso: Iso[A0, A]): Schema[Iso[AT, A], A] =
+  final def iso[AT, A0, A](base: Schema[AT, A0], iso: Iso[A0, A]): Schema[AT, A] =
     BiFix(IsoSchemaF(base, iso))
 
   final def self[AT, A](root: => Schema[AT, A]): Schema[AT, A] =

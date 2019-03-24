@@ -32,20 +32,20 @@ trait JsonModule[R <: Realisation] extends SchemaModule[R] {
           schema match {
 
             //case PrimSchemaF(prim)  => RightOnly(primNT(prim))
-            case x: PrimSchema[RightOnly[Encoder, ?, ?], A] => RightOnly(primNT(x.prim))
+            case x: PrimSchema[RightOnly[Encoder, ?, ?], _] => RightOnly(primNT(x.prim))
             case x: Prod[RightOnly[Encoder, ?, ?], at, a, bt, b] =>
-              RightOnly[Encoder, (at, bt), (a, b)]((a => x.left.fb(a._1) + "," + x.right.fb(a._2)))
+              RightOnly[Encoder, at * bt, (a, b)]((a => x.left.fb(a._1) + "," + x.right.fb(a._2)))
             case x: Sum[RightOnly[Encoder, ?, ?], at, a, bt, b] =>
-              RightOnly[Encoder, at \/ bt, a \/ b](a => a.fold(x.left.fb, x.right.fb))
-            case i: IsoSchema[RightOnly[Encoder, ?, ?], _, AT, A] =>
+              RightOnly[Encoder, at + bt, a \/ b](a => a.fold(x.left.fb, x.right.fb))
+            case i: IsoSchema[RightOnly[Encoder, ?, ?], _, _, _] =>
               RightOnly[Encoder, AT, A](i.base.fb.compose(i.iso.reverseGet))
-            case r: Record[RightOnly[Encoder, ?, ?], AT, A] =>
+            case r: Record[RightOnly[Encoder, ?, ?], _, _] =>
               RightOnly[Encoder, AT, A](
                 encloseInBraces.compose(r.fields.fb).compose(r.iso.reverseGet)
               )
-            case x: Sequence[RightOnly[Encoder, ?, ?], AT, A] =>
-              RightOnly[Encoder, List[AT], List[A]](
-                a => a.map(x.element.fb).mkString("[", ",", "]")
+            case x: Sequence[RightOnly[Encoder, ?, ?], _, a] =>
+              RightOnly[Encoder, AT, List[a]](
+                (a: List[a]) => a.map(x.element.fb).mkString("[", ",", "]")
               )
             case x: Field[RightOnly[Encoder, ?, ?], AT, A] =>
               RightOnly[Encoder, AT, A](makeField(fieldLabel(x.id)).compose(x.schema.fb))
