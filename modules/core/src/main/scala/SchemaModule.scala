@@ -35,6 +35,7 @@ import BiNat._
 
 abstract class +[A, B] {}
 abstract class *[A, B] {}
+abstract class Rec     {}
 
 import scalaz.{ BiNaturalTransformation => ~>> }
 
@@ -178,11 +179,11 @@ final case class ConstSchemaF[F[_, _], AT, A, Prim[_], SumTermId, ProductTermId]
 final case class SelfReference[F[_, _], H[_, _], AT, A, Prim[_], SumTermId, ProductTermId](
   private val ref: () => F[AT, A],
   private val nattrans: F ~>> H
-) extends SchemaF[Prim, SumTermId, ProductTermId, H, AT, A] {
+) extends SchemaF[Prim, SumTermId, ProductTermId, H, Rec, A] {
 
   lazy val unroll: H[AT, A] = nattrans(ref())
 
-  def hmap[G[_, _]](nt: H ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, AT, A] =
+  def hmap[G[_, _]](nt: H ~>> G): SchemaF[Prim, SumTermId, ProductTermId, G, Rec, A] =
     SelfReference[F, G, AT, A, Prim, SumTermId, ProductTermId](ref, nt.compose(nattrans))
 }
 
@@ -491,7 +492,7 @@ trait SchemaModule[R <: Realisation] {
   final def iso[AT, A0, A](base: Schema[AT, A0], iso: Iso[A0, A]): Schema[AT, A] =
     BiFix(IsoSchemaF(base, iso))
 
-  final def self[AT, A](root: => Schema[AT, A]): Schema[AT, A] =
+  final def self[AT, A](root: => Schema[AT, A]): Schema[Rec, A] =
     BiFix(
       SelfReference(
         () => root,

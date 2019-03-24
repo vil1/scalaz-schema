@@ -46,7 +46,7 @@ trait TestModule extends SchemaModule[JsonSchema.type] with HasMigrations[JsonSc
     }
   )
 
-  def person: Schema[Person] = record(
+  def person: Schema[_, Person] = record(
     "name" -*>: prim(JsonSchema.JsonString) :*:
       "role" -*>: optional(
       role
